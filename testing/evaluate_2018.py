@@ -65,6 +65,12 @@ def evaluate(model, test_loader, device, label_map):
     print(f"TN: {tn}, FP: {fp}, TP: {tp}, FN: {fn}")
     print(f"Binary Acc: {(tp+tn)/(tp+tn+fp+fn)*100:.2f}%")
 
+    # Metrics requested by user
+    benign_rate = tn / (tn + fp) if (tn + fp) > 0 else 0
+    attack_rate = tp / (tp + fn) if (tp + fn) > 0 else 0
+    print(f"Found Benign / Benign Rate: {benign_rate*100:.2f}%")
+    print(f"Found Not Benign / Not Benign Rate: {attack_rate*100:.2f}%")
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', type=int, default=128)

@@ -18,12 +18,15 @@ class GuardianDataLoader:
         # Common column mapping to standardize names if needed
         # In CIC-IDS, usually just stripping whitespace is enough
         
-    def _load_csvs(self, directory, limit=None):
+    def _load_csvs(self, directory, limit=None, max_files=None):
         """Loads all CSV files from a directory."""
         all_files = glob.glob(os.path.join(directory, "*.csv"))
         df_list = []
         
-        for filename in all_files:
+        for i, filename in enumerate(all_files):
+            if max_files is not None and i >= max_files:
+                break
+                
             print(f"Loading {filename}...")
             try:
                 # Some files might have encoding issues or mixed types, handling robustly
@@ -34,7 +37,7 @@ class GuardianDataLoader:
                 df_list.append(df)
             except Exception as e:
                 print(f"Error loading {filename}: {e}")
-                
+            
         if not df_list:
             print(f"No CSV files found in {directory}")
             return pd.DataFrame()
@@ -46,12 +49,14 @@ class GuardianDataLoader:
         df.columns = df.columns.str.strip()
         return df
 
-    def clean_data(self, df, mode='train_autoencoder'):
+    def clean_data(self, df, mode='train_autoencoder', fill_stats=None):
         """
         Cleans data, drops variables, and handles labels.
         mode:
          - 'train_autoencoder': Returns only BENIGN data (dropped labels).
          - 'train_classifier': Returns all data with encoded labels (X, y).
+        fill_stats: dict of {col: max_value} to replace Inf/NaN with. 
+                    If None, uses local df.max().
         """
         # Standardize columns first
         df = self.standardize_columns(df)
@@ -126,11 +131,24 @@ class GuardianDataLoader:
 
         # Handle Infinite and NaN
         # First ensure numeric types (coercing errors to NaN)
-        # This is critical for 2018 data which may have mixed types or "Infinity" strings
         df = df.apply(pd.to_numeric, errors='coerce')
         
+        # Replace Inf with NaN temporarily
         df.replace([np.inf, -np.inf], np.nan, inplace=True)
-        df.fillna(0, inplace=True)
+        
+        # Fill NaNs with the Maximum value of that column (to preserve "High Rate" signal)
+        # instead of 0 (which looks like "Idle").
+        # If fill_stats provided (from Training Scaler), use that.
+        # Otherwise use local max.
+        if fill_stats:
+            # fillna with a dict {col: value}
+            # Only for columns present in fill_stats and df
+            df.fillna(value=fill_stats, inplace=True)
+            # Cleanup any remaining
+            df.fillna(0, inplace=True)
+        else:
+            df.fillna(df.max(), inplace=True)
+            df.fillna(0, inplace=True) # Catch-all for columns that were all NaN
         
         return df, labels
 
@@ -181,7 +199,7 @@ class GuardianDataLoader:
         return sequences, None
 
 # Helper function to serve as the main entry point for data tasks
-def process_pipeline(primary_path=None, secondary_path=None, scaler_path=None, mode='train_autoencoder', dataset_type='ids2017', limit=None):
+def process_pipeline(primary_path=None, secondary_path=None, scaler_path=None, mode='train_autoencoder', dataset_type='ids2017', limit=None, max_files=None):
     
     # Resolve default paths relative to this script (engine/data_loader.py -> ../)
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -194,9 +212,21 @@ def process_pipeline(primary_path=None, secondary_path=None, scaler_path=None, m
 
     loader = GuardianDataLoader(seq_len=10)
     
+    # Pre-load Scaler statistics if we are in inference/eval mode
+    # This ensures we fill 'Infinity' with the Training Data's Max, not the Test Data's local max.
+    fill_stats = None
+    if mode != 'train_autoencoder' and os.path.exists(scaler_path):
+        try:
+             # We rely on the fact that loader.load_scaler puts it in self.scaler
+             s = joblib.load(scaler_path)
+             if hasattr(s, 'feature_names_in_') and hasattr(s, 'data_max_'):
+                 fill_stats = dict(zip(s.feature_names_in_, s.data_max_))
+        except Exception:
+            pass
+    
     # 1. Ingestion
     print(f"Loading Primary Dataset from {primary_path}...")
-    df1 = loader._load_csvs(primary_path, limit=limit)
+    df1 = loader._load_csvs(primary_path, limit=limit, max_files=max_files)
     
     # 2018 Support: Column Mapping
     if dataset_type == 'ids2018':
@@ -315,7 +345,7 @@ def process_pipeline(primary_path=None, secondary_path=None, scaler_path=None, m
 
     # 2. Cleaning
     print(f"Cleaning data for mode: {mode}...")
-    cleaned_df, labels = loader.clean_data(full_df, mode=mode)
+    cleaned_df, labels = loader.clean_data(full_df, mode=mode, fill_stats=fill_stats)
     
     if cleaned_df.empty:
         print("Error: Cleaned DataFrame is empty! Check label mapping or input data.")

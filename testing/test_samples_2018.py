@@ -25,8 +25,8 @@ def test_random_samples_2018():
         print("Model not found.")
         return
 
-    print("Loading IDS-2018 Data for Sampling...")
-    seqs, labels, loader = process_pipeline(ids2018_path, scaler_path=scaler_path, mode='train_classifier', dataset_type='ids2018')
+    print("Loading IDS-2018 Data for Sampling (First file only)...")
+    seqs, labels, loader = process_pipeline(ids2018_path, scaler_path=scaler_path, mode='train_classifier', dataset_type='ids2018', max_files=1)
     
     if seqs.size == 0:
         print("No data loaded.")

@@ -96,6 +96,7 @@ def main():
     parser.add_argument('--epochs', type=int, default=5)
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--limit', type=int, default=None, help="Limit rows for debugging")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -113,7 +114,7 @@ def main():
     if args.phase in ['autoencoder', 'all']:
         print("Prepare Data for Autoencoder (Benign Only)...")
         # Ensure we use 'train_autoencoder' mode
-        seqs, _, loader = process_pipeline(primary_path, scaler_path=scaler_path, mode='train_autoencoder')
+        seqs, _, loader = process_pipeline(primary_path, scaler_path=scaler_path, mode='train_autoencoder', limit=args.limit)
         
         if seqs.size == 0:
             print("No data found for AE training. Generating DUMMY data for valid syntax check.")
@@ -136,7 +137,7 @@ def main():
     if args.phase in ['classifier', 'all']:
         print("Prepare Data for Classifier (All Classes)...")
         # Ensure we use 'train_classifier' mode
-        seqs, labels, loader = process_pipeline(primary_path, scaler_path=scaler_path, mode='train_classifier')
+        seqs, labels, loader = process_pipeline(primary_path, scaler_path=scaler_path, mode='train_classifier', limit=args.limit)
         
         if seqs.size == 0:
              print("No data found for Classifier training. Generating DUMMY data.")
