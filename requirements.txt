@@ -1,0 +1,10 @@
+
+numpy
+pandas
+scikit-learn
+joblib
+matplotlib
+seaborn
+# Note: torch should be installed manually for CUDA support, e.g.:
+# pip install torch --index-url https://download.pytorch.org/whl/cu118
+torch
