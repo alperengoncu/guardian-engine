@@ -43,7 +43,6 @@ def main():
         print(f"Data found at {primary_data_path}. Processing...")
         # Note: process_pipeline might take a while on full dataset. 
         # For this script we might want to limit it or just run it.
-        # User requested "Merging" and "Loading", assuming they want to see it work.
         try:
             # We can't easily limit rows inside process_pipeline without modifying it 
             # or passing args. For now, we trust the user has resources or will modify.

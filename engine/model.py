@@ -73,7 +73,6 @@ class GuardianHybrid(nn.Module):
             # Classification
             logits = self.classifier(latent_vector)
             # We usually return logits for CrossEntropyLoss, or Softmax for inference.
-            # Returning Softmax probabilities as requested
             probs = F.softmax(logits, dim=1)
             return probs
             
