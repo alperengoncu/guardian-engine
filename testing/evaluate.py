@@ -87,6 +87,7 @@ def evaluate(model, test_loader, device, label_map):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--limit', type=int, default=None, help="Limit rows per CSV for memory")
     args = parser.parse_args()
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -105,7 +106,7 @@ def main():
     # Load Data
     # Utilizing 'train_classifier' mode to load everything with labels
     print("Loading Test Data...")
-    seqs, labels, loader = process_pipeline(primary_path, scaler_path=scaler_path, mode='train_classifier')
+    seqs, labels, loader = process_pipeline(primary_path, scaler_path=scaler_path, mode='train_classifier', limit=args.limit)
     
     if seqs.size == 0:
         print("No data found. Exiting.")

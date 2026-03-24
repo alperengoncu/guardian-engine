@@ -92,6 +92,9 @@ class GuardianDataLoader:
                 # 2018 / Robust Mappings
                 if 'BENIGN' in label_upper:
                     return 0
+                # Exclude 2018-only attack types not present in 2017 training data
+                if 'LOIC' in label_upper or 'HOIC' in label_upper:
+                    return -1
                 if 'DOS' in label_upper or 'DDOS' in label_upper:
                     return 1 # Map all DoS/DDoS to 1
                 if 'PORT' in label_upper or 'SSH' in label_upper or 'FTP' in label_upper:
